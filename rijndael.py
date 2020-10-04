@@ -87,36 +87,12 @@ def subbytes(texto):
     return state
 
 
-def decsubbyte(texto):
-    state = []
-    s = []
-    for c in range(0, len(texto)):
-        if type(texto[c]) == int:
-            s.append("{:02x}".format(texto[c]))
-        else:
-            # Condição para fazer a subbyte no KeySchedule
-            s.append("{:02x}".format(ord(str(texto[c]))))  # tradução de cada elemento para seu valor em hex/utf-8
-        # usar o valor hex como chave pra a tradução
-        state.append(insbox[int(s[c][0], 16)][int(s[c][1], 16)])
-    return state
-
-
 def shiftrows(state):
     newstate = [
         *state[0: 4],
         state[5], state[6], state[7], state[4],
         state[10], state[11], state[8], state[9],
         state[15], state[12], state[13], state[14],
-    ]
-    return newstate
-
-
-def decshiftrow(state):
-    newstate = [
-        *state[0: 4],
-        state[7], state[4], state[5], state[6],
-        state[10], state[11], state[8], state[9],
-        state[13], state[14], state[15], state[12],
     ]
     return newstate
 
@@ -146,48 +122,6 @@ def mixcolumns(state):
     for e in range(0, len(state)):
         if state[e] > 0xff:
             state[e] = state[e] ^ reducer
-    return state
-
-
-def decmixcolumns(state):
-    """
-    Para decripto:  14 11 13  9
-                    9  14 11 13
-                    13  9 14 11
-                    11 13  9 14
-    """
-    teste = [
-        0x39, 0x20, 0xdc, 0x19,
-        0x25, 0xdc, 0x11, 0x6a,
-        0x84, 0x90, 0x85, 0xb0,
-        0x1d, 0xfb, 0x97, 0x32,
-    ]
-    reducer = 283
-    a0 = state[0:4]
-    a1 = state[4:8]
-    a2 = state[8:12]
-    a3 = state[12:]
-    for f in range(0, 4):
-        state[f] = (a0[f] * 14) ^ (a1[f] * 11) ^ (a2[f] * 13) ^ (a3[f] * 9)
-        state[f + 4] = (a0[f] * 9) ^ (a1[f] * 14) ^ (a2[f] * 11) ^ (a3[f] * 13)
-        state[f + 8] = (a0[f] * 13) ^ (a1[f] * 9) ^ (a2[f] * 14) ^ (a3[f] * 11)
-        state[f + 12] = (a0[f] * 11) ^ (a1[f] * 13) ^ (a2[f] * 9) ^ (a3[f] * 14)
-    print(state)
-    for g in range(0, len(state)):
-        print(state[g], ' | ', teste[g])
-        print(bin(state[g]), ' | ', bin(teste[g]))
-        print(state[g] ^ teste[g])
-        temp = state[g] ^ reducer
-        print(temp, bin(temp))
-        print(temp ^ teste[g])
-        if temp == teste[g]:
-            print(temp, True)
-        temp = (state[g] ^ reducer) >> 3
-        print(temp, bin(temp))
-        print(temp ^ teste[g])
-        if temp == teste[g]:
-            print(temp, True)
-        print(10*'*')
     return state
 
 
@@ -274,31 +208,6 @@ def encript(texto, chave):
     # for i in range(0, 16, 4):
     #    print(hex(state[i]), hex(state[i + 1]), hex(state[i + 2]), hex(state[i + 3]))
     state = tostr(state)
-    return state
-
-
-def decript(texto, chave):
-    """
-    :param texto: ciphertext com 128bits
-    :param chave: com 128bits
-    :return: plaintext
-    Deve seguir o mesmo principio de receber e retornar arrays de hex()
-    AddRoundkey(), Keyschedule() são as mesmas
-    Subbyte é a mesma mas precisa usar outra sbox
-    round -10: addroundkey, shiftrow, subbyte
-    round -9 a -1: addroundkey, mixcolumns, shiftrows, subbytes.
-    round 0: addroundkey
-    """
-    chave = tohexlist(chave)
-    rk = keyschedule(chave)
-    ciphertext = tohexlist(texto)
-    # --- Round -10  ---
-    state = addroundkey(ciphertext, chave)
-    state = decshiftrow(state)
-    state = decsubbyte(state)
-    # --- Round -9 a -1 ---
-    state = addroundkey(state, rk[0:16])
-    state = decmixcolumns(state)
     return state
 
 
