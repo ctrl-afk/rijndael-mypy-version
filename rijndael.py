@@ -51,26 +51,33 @@ rcon = [
 
 
 def keyschedule(chave):
-    for a in range(0, 10):
-        ax = 16 * a
-        rotword = [*chave[ax + 7::4], chave[ax + 3]]
+    rk = [chave]
+    for a in range(1, 11):
+        rotword = [*chave[- 3:], chave[-4]]
         rotword = subbytes(rotword)  # Coluna 4 root
-        c0 = chave[ax + 0:-3:4]  # Coluna 0 root
-        c1 = chave[ax + 1:-2:4]  # Coluna 1 root
-        c2 = chave[ax + 2:-1:4]  # Coluna 2 root
-        c3 = chave[ax + 3::4]  # Coluna 3 root
+        c0 = chave[-16:-12]  # Coluna 0 root
+        c1 = chave[-12:-8]  # Coluna 1 root
+        c2 = chave[-8:-4]  # Coluna 2 root
+        c3 = chave[-4:]  # Coluna 3 root
         c4 = []  # Coluna 4 / 0
         # 1 = c0  xor  rotword  xor  rcon
+        chave.extend((
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0
+        ))
         for n in range(0, 4):
             temp = c0[n] ^ rotword[n] ^ rcon[0][n]
-            chave.append(temp)  # Cria coluna 0
+            chave[-16 + n] = temp  # Cria coluna 0
             c4.append(temp)
-            chave.append(c1[n] ^ c4[n])  # Cria coluna 1
-            chave.append(c2[n] ^ chave[-1])  # Cria coluna 2
-            chave.append(c3[n] ^ chave[-1])  # Cria coluna 3
+            chave[-12 + n] = c1[n] ^ c4[n]  # Cria coluna 1
+            chave[-8 + n] = c2[n] ^ chave[-12 + n]  # Cria coluna 2
+            chave[-4 + n] = c3[n] ^ chave[-8 + n]  # Cria coluna 3
         rcon.pop(0)
-    chave = chave[16:]
-    return chave
+        rk.append(chave[-16:])
+    rk.pop(0)
+    return rk
 
 
 def subbytes(texto):
@@ -89,20 +96,20 @@ def subbytes(texto):
 
 def shiftrows(state):
     newstate = [
-        *state[0: 4],
-        state[5], state[6], state[7], state[4],
-        state[10], state[11], state[8], state[9],
-        state[15], state[12], state[13], state[14],
+        state[0], state[5], state[10], state[15],
+        state[4], state[9], state[14], state[3],
+        state[8], state[13], state[2], state[7],
+        state[12], state[1], state[6], state[11],
     ]
     return newstate
 
 
 def mixcolumns(state):
     reducer = 283
-    a0 = state[0:4]
-    a1 = state[4:8]
-    a2 = state[8:12]
-    a3 = state[12:]
+    a0 = state[0], state[4], state[8], state[12]
+    a1 = state[1], state[5], state[9], state[13]
+    a2 = state[2], state[6], state[10], state[14]
+    a3 = state[3], state[7], state[11], state[15]
     b0, b1, b2, b3 = [], [], [], []
     for d in range(0, 4):
         b0.append(a0[d] << 1)
@@ -115,10 +122,10 @@ def mixcolumns(state):
                         1 1 2 3                    13  9 14 11
                         3 1 1 2                    11 13  9 14
         '''
-        state[d] = b0[d] ^ a3[d] ^ a2[d] ^ b1[d] ^ a1[d]
-        state[d + 4] = b1[d] ^ a0[d] ^ a3[d] ^ b2[d] ^ a2[d]
-        state[d + 8] = b2[d] ^ a1[d] ^ a0[d] ^ b3[d] ^ a3[d]
-        state[d + 12] = b3[d] ^ a2[d] ^ a1[d] ^ b0[d] ^ a0[d]
+        state[d * 4] = b0[d] ^ a3[d] ^ a2[d] ^ b1[d] ^ a1[d]
+        state[d * 4 + 1] = b1[d] ^ a0[d] ^ a3[d] ^ b2[d] ^ a2[d]
+        state[d * 4 + 2] = b2[d] ^ a1[d] ^ a0[d] ^ b3[d] ^ a3[d]
+        state[d * 4 + 3] = b3[d] ^ a2[d] ^ a1[d] ^ b0[d] ^ a0[d]
     for e in range(0, len(state)):
         if state[e] > 0xff:
             state[e] = state[e] ^ reducer
@@ -128,7 +135,6 @@ def mixcolumns(state):
 def addroundkey(state, rk):
     # deve ser enviado como hex()
     for j in range(0, 16):
-        print(state[j], rk[j])
         state[j] = state[j] ^ rk[j]
     return state
 
@@ -149,66 +155,52 @@ def tostr(state):
 
 def encript(texto, chave):
     chave = tohexlist(chave)
-    print(chave)
     rk = keyschedule(chave)
+    for t in range(0, 10):
+        format_matriz(rk[t], f"rk {t}")
+    print(30*'*')
     plaintext = tohexlist(texto)
-    print(plaintext)
-    # --- Round 0 ---
     state = addroundkey(plaintext, chave)
-
-    print('*************')
-    print('addroundkey 0 --')
-    for o in state:
-        print(hex(o))
-    print('*************')
+    format_matriz(state, 'add 0')
+    # --- Round 0 ---
     for n in range(0, 9):
         # --- Round 1 a 9 ---
         state = subbytes(state)  # ok
-        print('*************')
-        print('subbytes', n)
-        for o in state:
-            print(hex(o))
-        print('*************')
+        format_matriz(state, f'sub {n}')
+
         state = shiftrows(state)  # ok
-        print('*************')
-        print('shiftrows', n)
-        for o in state:
-            print(hex(o))
-        print('*************')
+        format_matriz(state, f'shift {n}')
+
         state = mixcolumns(state)
-        print('*************')
-        print('mixcolumns', n)
-        for o in state:
-            print(hex(o))
-        print('*************')
-        state = addroundkey(state, rk[16 * n:16 * n + 16])
-        print('*************')
-        print('addroundkey', n)
-        for o in state:
-            print(hex(o))
-        print('*************')
+        format_matriz(state, f'mix {n}')
+
+        state = addroundkey(state, rk[n])
+        format_matriz(state, f'add {n}')
+
     # --- Round 10 ---
     state = subbytes(state)  # ok
-    print('*************')
-    print('subbytes  10')
-    for o in state:
-        print(hex(o))
-    print('*************')
-    state = shiftrows(state)
-    print('*************')
-    for o in state:
-        print(hex(o))
-    print('*************')
-    state = addroundkey(state, rk[-16:])
-    print('*************')
-    for o in state:
-        print(hex(o))
-    print('*************')
+    format_matriz(state, 'sub')
 
-    # for i in range(0, 16, 4):
-    #    print(hex(state[i]), hex(state[i + 1]), hex(state[i + 2]), hex(state[i + 3]))
+    state = shiftrows(state)
+    format_matriz(state, 'shift')
+
+    state = addroundkey(state, rk[9])
+    format_matriz(state, 'Final')
+
     state = tostr(state)
+    # tudo ok de acordo com a FIPS 197
+
     return state
+
+
+def format_matriz(state, desc):
+    if desc is None:
+        desc = ''
+    print(20 * '=')
+    print(desc)
+    for obj in range(0, int(len(state) / 4)):
+        print(hex(state[obj]), hex(state[obj + 4]), hex(state[obj + 8]), hex(state[obj + 12]))
+    print(20 * '=')
 
 
 '''
@@ -241,7 +233,7 @@ print('Ok...'
 '''
 
 x = [0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34]
-x2 = [0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xf, 0x4f, 0x3c]
+x2 = [0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c]
 tx = ''
 ch = ''
 
@@ -253,5 +245,3 @@ print(tx)
 print(ch)
 
 r = encript(tx, ch)
-for i in r:
-    print(hex(ord(i)))
