@@ -81,4 +81,3 @@ def decript(texto, chave):
     state = addroundkey(state, chave)
     state = tostr(state)
     return state
-

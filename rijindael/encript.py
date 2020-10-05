@@ -139,7 +139,6 @@ def encript(texto, chave):
     rk = keyschedule(chave)
     plaintext = tohexlist(texto)
     state = addroundkey(plaintext, chave)
-    format_matriz(state, 'add 0')
     # --- Round 0 ---
     for n in range(0, 9):
         # --- Round 1 a 9 ---
@@ -172,49 +171,3 @@ def format_matriz(state, desc):
     for obj in range(0, int(len(state) / 4)):
         print(hex(state[obj]), hex(state[obj + 4]), hex(state[obj + 8]), hex(state[obj + 12]))
     print(20 * '=')
-
-
-'''
-Tudo Ok com  a criptografia
-ttext = '21àCZ17ö0¨¢4'
-tchave = "+(«	~®÷ÏÒO¦<"
-result = encript(ttext, tchave)
-
-0x39 0x2 0xdc 0x19
-0x25 0xdc 0x11 0x6a
-0x84 0x9 0x85 0xb
-0x1d 0xfb 0x97 0x32
-
-print('\n', 18 * '=')
-print('Olá, pessoa. Tudo bom? '
-      '\nQue tal criptografar aquela mensagem que você que mandar?'
-      '\nSeu texto/mensagem devem ter 16 caracteres cada '
-      '\nE os caracteres podem ser: '
-      '\nLetras, numeros, espaços ou caracteres especias("/,#,@,?")')
-
-t = str(input('Vamos começar! '
-              '\nDigite sua mensagem com 16 digitos'
-              '\n=>> '))
-c = str(input('Agora digite sua chave secreta, que será a base para criptografar e descriptografar sua mensagem '
-              '\nGuarde bem sua chave, você precisará dela depois'
-              '\nLembrando que a chave também deve ter 16 caracteres '
-              '\n=>> '))
-print('Ok...'
-      '\nEntão essa é sua mensagem criptografada\n')
-
-
-x = [0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34]
-x2 = [0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c]
-tx = ''
-ch = ''
-
-for i in x:
-    tx += ''.join(chr(i))
-for i in x2:
-    ch += ''.join(chr(i))
-print('texto =', tx)  # 2Cö¨Z011¢à74
-print('chave =', ch)
-
-r = encript(tx, ch)
-print('result =', r)
-'''
