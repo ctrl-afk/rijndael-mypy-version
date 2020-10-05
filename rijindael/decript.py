@@ -1,4 +1,4 @@
-from .rijndael import tohexlist, keyschedule, addroundkey
+from encript import tohexlist, keyschedule, addroundkey, mixcolumns, tostr
 
 insbox = [
     [0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb],
@@ -36,53 +36,20 @@ def decsubbyte(texto):
 
 def decshiftrow(state):
     newstate = [
-        *state[0: 4],
-        state[7], state[4], state[5], state[6],
-        state[10], state[11], state[8], state[9],
-        state[13], state[14], state[15], state[12],
+        state[0], state[13], state[10], state[7],
+        state[4], state[1], state[14], state[11],
+        state[8], state[5], state[2], state[15],
+        state[12], state[9], state[6], state[3],
     ]
+    # ok
     return newstate
 
 
 def decmixcolumns(state):
-    """
-    Para decripto:  14 11 13  9
-                    9  14 11 13
-                    13  9 14 11
-                    11 13  9 14
-    """
-    teste = [
-        0x39, 0x20, 0xdc, 0x19,
-        0x25, 0xdc, 0x11, 0x6a,
-        0x84, 0x90, 0x85, 0xb0,
-        0x1d, 0xfb, 0x97, 0x32,
-    ]
-    reducer = 283
-    a0 = state[0:4]
-    a1 = state[4:8]
-    a2 = state[8:12]
-    a3 = state[12:]
-    for f in range(0, 4):
-        state[f] = (a0[f] * 14) ^ (a1[f] * 11) ^ (a2[f] * 13) ^ (a3[f] * 9)
-        state[f + 4] = (a0[f] * 9) ^ (a1[f] * 14) ^ (a2[f] * 11) ^ (a3[f] * 13)
-        state[f + 8] = (a0[f] * 13) ^ (a1[f] * 9) ^ (a2[f] * 14) ^ (a3[f] * 11)
-        state[f + 12] = (a0[f] * 11) ^ (a1[f] * 13) ^ (a2[f] * 9) ^ (a3[f] * 14)
-    print(state)
-    for g in range(0, len(state)):
-        print(state[g], ' | ', teste[g])
-        print(bin(state[g]), ' | ', bin(teste[g]))
-        print(state[g] ^ teste[g])
-        temp = state[g] ^ reducer
-        print(temp, bin(temp))
-        print(temp ^ teste[g])
-        if temp == teste[g]:
-            print(temp, True)
-        temp = (state[g] ^ reducer) >> 3
-        print(temp, bin(temp))
-        print(temp ^ teste[g])
-        if temp == teste[g]:
-            print(temp, True)
-        print(10*'*')
+    for times in range(0, 3):
+        state = mixcolumns(state)
+
+    # ok
     return state
 
 
@@ -102,10 +69,16 @@ def decript(texto, chave):
     rk = keyschedule(chave)
     ciphertext = tohexlist(texto)
     # --- Round -10  ---
-    state = addroundkey(ciphertext, chave)
+    state = addroundkey(ciphertext, rk[9])
     state = decshiftrow(state)
     state = decsubbyte(state)
     # --- Round -9 a -1 ---
-    state = addroundkey(state, rk[0:16])
-    state = decmixcolumns(state)
+    for n in range(0, 9):
+        state = addroundkey(state, rk[8 - n])
+        state = decmixcolumns(state)
+        state = decshiftrow(state)
+        state = decsubbyte(state)
+    state = addroundkey(state, chave)
+    state = tostr(state)
     return state
+
