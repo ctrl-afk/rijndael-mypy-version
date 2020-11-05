@@ -32,45 +32,34 @@ rcon = [
 
 
 def keyschedule(chave):
-    rk = [chave]
-    for a in range(1, 11):
-        rotword = [*chave[- 3:], chave[-4]]
+    chave = [chave]
+    for a in range(0, 10):
+        rotword = [*chave[a][- 3:], chave[a][-4]]
         rotword = subbytes(rotword)  # Coluna 4 root
-        c0 = chave[-16:-12]  # Coluna 0 root
-        c1 = chave[-12:-8]  # Coluna 1 root
-        c2 = chave[-8:-4]  # Coluna 2 root
-        c3 = chave[-4:]  # Coluna 3 root
-        c4 = []  # Coluna 4 / 0
-        # 1 = c0  xor  rotword  xor  rcon
-        chave.extend((
+        c0 = chave[a][:4]  # Coluna 0 root
+        c1 = chave[a][4:8]  # Coluna 1 root
+        c2 = chave[a][8:12]  # Coluna 2 root
+        c3 = chave[a][12:]  # Coluna 3 root
+        chave.append([
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0
-        ))
+        ])
         for n in range(0, 4):
-            temp = c0[n] ^ rotword[n] ^ rcon[0][n]
-            chave[-16 + n] = temp  # Cria coluna 0
-            c4.append(temp)
-            chave[-12 + n] = c1[n] ^ c4[n]  # Cria coluna 1
-            chave[-8 + n] = c2[n] ^ chave[-12 + n]  # Cria coluna 2
-            chave[-4 + n] = c3[n] ^ chave[-8 + n]  # Cria coluna 3
+            chave[a+1][n] = c0[n] ^ rotword[n] ^ rcon[0][n]  # Cria coluna 0
+            chave[a+1][4+n] = c1[n] ^ chave[a+1][n]  # Cria coluna 1
+            chave[a+1][8+n] = c2[n] ^ chave[a+1][4+n]  # Cria coluna 2
+            chave[a+1][12+n] = c3[n] ^ chave[a+1][8+n]  # Cria coluna 3
         rcon.pop(0)
-        rk.append(chave[-16:])
-    rk.pop(0)
-    return rk
+    return chave[1:]
 
 
 def subbytes(texto):
     state = []
     s = []
     for b in range(0, len(texto)):
-        if type(texto[b]) == int:
-            s.append("{:02x}".format(texto[b]))
-        else:
-            # Condição para fazer a subbyte no KeySchedule
-            s.append("{:02x}".format(ord(str(texto[b]))))  # tradução de cada elemento para seu valor em hex/utf-8
-        # usar o valor hex como chave pra a tradução
+        s.append("{:02x}".format(texto[b]))
         state.append(sbox[int(s[b][0], 16)][int(s[b][1], 16)])
     return state
 
@@ -87,22 +76,17 @@ def shiftrows(state):
 
 def mixcolumns(state):
     reducer = 283
-    a0 = state[0], state[4], state[8], state[12]
-    a1 = state[1], state[5], state[9], state[13]
-    a2 = state[2], state[6], state[10], state[14]
-    a3 = state[3], state[7], state[11], state[15]
+    a0 = state[0:13:4]
+    a1 = state[1:14:4]
+    a2 = state[2:15:4]
+    a3 = state[3::4]
     b0, b1, b2, b3 = [], [], [], []
+
     for d in range(0, 4):
         b0.append(a0[d] << 1)
         b1.append(a1[d] << 1)
         b2.append(a2[d] << 1)
         b3.append(a3[d] << 1)
-        '''
-        Para cripto:    2 3 1 1    Para decripto:  14 11 13  9
-                        1 2 3 1                    9  14 11 13
-                        1 1 2 3                    13  9 14 11
-                        3 1 1 2                    11 13  9 14
-        '''
         state[d * 4] = b0[d] ^ a3[d] ^ a2[d] ^ b1[d] ^ a1[d]
         state[d * 4 + 1] = b1[d] ^ a0[d] ^ a3[d] ^ b2[d] ^ a2[d]
         state[d * 4 + 2] = b2[d] ^ a1[d] ^ a0[d] ^ b3[d] ^ a3[d]
@@ -114,7 +98,6 @@ def mixcolumns(state):
 
 
 def addroundkey(state, rk):
-    # deve ser enviado como hex()
     for j in range(0, 16):
         state[j] = state[j] ^ rk[j]
     return state
@@ -134,40 +117,27 @@ def tostr(state):
     return temp
 
 
+def savemesg(state):
+    from time import time
+    n = 'mensg' + str(int(time())) + '.txt'
+    txt = open(n, 'w', encoding="utf-8")
+    txt.write(str(state))
+    txt.close()
+
+
 def encript(texto, chave):
     chave = tohexlist(chave)
     rk = keyschedule(chave)
     plaintext = tohexlist(texto)
     state = addroundkey(plaintext, chave)
-    # --- Round 0 ---
     for n in range(0, 9):
-        # --- Round 1 a 9 ---
-        state = subbytes(state)  # ok
-
-        state = shiftrows(state)  # ok
-
+        state = subbytes(state)
+        state = shiftrows(state)
         state = mixcolumns(state)
-
         state = addroundkey(state, rk[n])
-
-    # --- Round 10 ---
-    state = subbytes(state)  # ok
-
+    state = subbytes(state)
     state = shiftrows(state)
-
     state = addroundkey(state, rk[9])
-
     state = tostr(state)
-    # tudo ok de acordo com a FIPS 197
-
+    savemesg(state)
     return state
-
-
-def format_matriz(state, desc):
-    if desc is None:
-        desc = ''
-    print(20 * '=')
-    print(desc)
-    for obj in range(0, int(len(state) / 4)):
-        print(hex(state[obj]), hex(state[obj + 4]), hex(state[obj + 8]), hex(state[obj + 12]))
-    print(20 * '=')

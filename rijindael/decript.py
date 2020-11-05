@@ -23,6 +23,12 @@ insbox = [
 def decsubbyte(texto):
     state = []
     s = []
+    for b in range(0, len(texto)):
+        s.append("{:02x}".format(texto[b]))
+        state.append(insbox[int(s[b][0], 16)][int(s[b][1], 16)])
+    '''
+    state = []
+    s = []
     for c in range(0, len(texto)):
         if type(texto[c]) == int:
             s.append("{:02x}".format(texto[c]))
@@ -31,6 +37,7 @@ def decsubbyte(texto):
             s.append("{:02x}".format(ord(str(texto[c]))))  # tradução de cada elemento para seu valor em hex/utf-8
         # usar o valor hex como chave pra a tradução
         state.append(insbox[int(s[c][0], 16)][int(s[c][1], 16)])
+    '''
     return state
 
 
@@ -48,31 +55,54 @@ def decshiftrow(state):
 def decmixcolumns(state):
     for times in range(0, 3):
         state = mixcolumns(state)
-
-    # ok
     return state
 
 
+def selectarq():
+    from os import listdir
+    fls = []
+    texto = ''
+    for org in listdir():
+        if ".txt" in org:
+            fls.append(org)
+    slct = str(input('Deseja selecionar a última mensagem criada? S/N?\n'
+                     '=>> '))
+    while True:
+        if slct not in "SsNn":
+            slct = str(input("Opção invalda... Escolha S/N:\n"
+                             "=>> "))
+        if slct in "Ss":
+            for fl in fls:
+                texto = fl
+            slct = open(texto, 'r', encoding="utf-8")
+            texto = slct.readline()
+            slct.close()
+            break
+        if slct in "Nn":
+            men = 0
+            for fl in fls:
+                print(men, ' - ', fl)
+                men += 1
+            men = int(input("Escolha o arquivo que deseja descriptografar: \n"
+                            "=>> "))
+            while men < 0 or men > len(fls) - 1:
+                men = int(input("Opção invalda... \n"
+                                "=>> "))
+            texto = fls[men]
+            slct = open(texto, 'r', encoding="utf-8")
+            texto = slct.readline()
+            slct.close()
+            break
+    return texto
+
+
 def decript(texto, chave):
-    """
-    :param texto: ciphertext com 128bits
-    :param chave: com 128bits
-    :return: plaintext
-    Deve seguir o mesmo principio de receber e retornar arrays de hex()
-    AddRoundkey(), Keyschedule() são as mesmas
-    Subbyte é a mesma mas precisa usar outra sbox
-    round -10: addroundkey, shiftrow, subbyte
-    round -9 a -1: addroundkey, mixcolumns, shiftrows, subbytes.
-    round 0: addroundkey
-    """
     chave = tohexlist(chave)
     rk = keyschedule(chave)
     ciphertext = tohexlist(texto)
-    # --- Round -10  ---
     state = addroundkey(ciphertext, rk[9])
     state = decshiftrow(state)
     state = decsubbyte(state)
-    # --- Round -9 a -1 ---
     for n in range(0, 9):
         state = addroundkey(state, rk[8 - n])
         state = decmixcolumns(state)

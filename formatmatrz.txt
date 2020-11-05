@@ -1,0 +1,8 @@
+def format_matriz(state, desc):
+    if desc is None:
+        desc = ''
+    print(20 * '=')
+    print(desc)
+    for obj in range(0, int(len(state) / 4)):
+        print(hex(state[obj]), hex(state[obj + 4]), hex(state[obj + 8]), hex(state[obj + 12]))
+    print(20 * '=')
