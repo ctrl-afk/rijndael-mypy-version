@@ -26,18 +26,6 @@ def decsubbyte(texto):
     for b in range(0, len(texto)):
         s.append("{:02x}".format(texto[b]))
         state.append(insbox[int(s[b][0], 16)][int(s[b][1], 16)])
-    '''
-    state = []
-    s = []
-    for c in range(0, len(texto)):
-        if type(texto[c]) == int:
-            s.append("{:02x}".format(texto[c]))
-        else:
-            # Condição para fazer a subbyte no KeySchedule
-            s.append("{:02x}".format(ord(str(texto[c]))))  # tradução de cada elemento para seu valor em hex/utf-8
-        # usar o valor hex como chave pra a tradução
-        state.append(insbox[int(s[c][0], 16)][int(s[c][1], 16)])
-    '''
     return state
 
 
@@ -48,7 +36,6 @@ def decshiftrow(state):
         state[8], state[5], state[2], state[15],
         state[12], state[9], state[6], state[3],
     ]
-    # ok
     return newstate
 
 
@@ -59,6 +46,7 @@ def decmixcolumns(state):
 
 
 def selectarq():
+    # Seleciona o arquivo para decriptar
     from os import listdir
     fls = []
     texto = ''

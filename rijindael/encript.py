@@ -47,11 +47,10 @@ def keyschedule(chave):
             0, 0, 0, 0
         ])
         for n in range(0, 4):
-            chave[a+1][n] = c0[n] ^ rotword[n] ^ rcon[0][n]  # Cria coluna 0
+            chave[a+1][n] = c0[n] ^ rotword[n] ^ rcon[a][n]  # Cria coluna 0
             chave[a+1][4+n] = c1[n] ^ chave[a+1][n]  # Cria coluna 1
             chave[a+1][8+n] = c2[n] ^ chave[a+1][4+n]  # Cria coluna 2
             chave[a+1][12+n] = c3[n] ^ chave[a+1][8+n]  # Cria coluna 3
-        rcon.pop(0)
     return chave[1:]
 
 
@@ -105,15 +104,32 @@ def addroundkey(state, rk):
 
 def tohexlist(texto):
     pt = []
-    for h in range(0, len(texto)):
-        pt.append(ord(str(texto[h])))
+    if len(texto) < 32:
+        for h in range(0, len(texto)):
+            pt.append(ord(str(texto[h])))
+    else:
+
+        for h in range(0, len(texto), 2):
+            pt.append(int(f'0x{texto[h:h+2]}', 16))
     return pt
 
 
 def tostr(state):
     temp = ''
     for e in state:
-        temp += ''.join(chr(e))
+        temp += chr(e)
+    return temp
+
+
+def tohex(state):
+    # Formata para ser salvo em hexadecimal
+    # Em formato de string pode causar problemas, principalmente com "\n"
+    temp = ''
+    for e in state:
+        if len(hex(e)) == 3:
+            temp += f"0{hex(e)[2:]}"
+        else:
+            temp += hex(e)[2:]
     return temp
 
 
@@ -123,6 +139,17 @@ def savemesg(state):
     txt = open(n, 'w', encoding="utf-8")
     txt.write(str(state))
     txt.close()
+
+
+def formattoencript(n, txt):
+    # Divide a string em 16 caracteres e o coloca em uma array
+    # "Arredonda" a string com espaços
+    state = []
+    while len(txt) % n != 0:
+        txt += ' '
+    for i in range(0, n * int(len(txt)/n), n):
+        state.append(txt[i:i+n])
+    return state
 
 
 def encript(texto, chave):
@@ -138,6 +165,5 @@ def encript(texto, chave):
     state = subbytes(state)
     state = shiftrows(state)
     state = addroundkey(state, rk[9])
-    state = tostr(state)
-    savemesg(state)
+    state = tohex(state)
     return state
